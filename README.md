@@ -1,2 +1,2 @@
 # i-lib
-A custom library I use for everything
+A custom library made for fun
