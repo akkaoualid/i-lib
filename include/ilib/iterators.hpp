@@ -21,12 +21,12 @@ struct enumerator_iter {
         typename std::iterator_traits<T>::iterator_category;
 
     enumerator_iter(const T& it) noexcept : iter(it) {}
-    constexpr auto operator*()
+    constexpr auto operator*() const
         -> std::pair<std::size_t, reference> requires requires {
         *iter;
     }
     { return {count, *iter}; }
-    constexpr auto operator->() -> pointer requires requires {
+    constexpr auto operator->() const -> pointer requires requires {
         iter.operator->();
     }
     { return std::to_address(iter); }

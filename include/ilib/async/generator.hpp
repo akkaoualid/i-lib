@@ -16,7 +16,7 @@ namespace ilib {
 template <class T>
 struct generator {
     struct promise_type {
-        T cur_value;
+        T cur_value{};
         auto yield_value(T value) {
             cur_value = value;
             return std::suspend_always{};
@@ -38,8 +38,8 @@ struct generator {
     }
 
     struct iterator {
-        bool done;
-        handle_t coro;
+        bool done{};
+        handle_t coro{};
         explicit iterator() : done(true) {}
         iterator(handle_t c_, bool d_) : coro(c_), done(d_) {}
         iterator& operator++() {
@@ -62,7 +62,7 @@ struct generator {
 
    private:
     explicit generator(promise_type* pt) : coro(handle_t::from_promise(*pt)) {}
-    handle_t coro;
+    handle_t coro{};
 };
 }  // namespace ilib
 #endif
