@@ -22,11 +22,13 @@ struct scope_exit {
     scope_exit(scope_exit&& se) noexcept(
         noexcept(std::is_nothrow_move_constructible_v<T> ||
                  std::is_nothrow_copy_constructible_v<T>)) {
-        if constexpr (std::is_nothrow_move_constructible_v<T> ||
-                      std::is_copy_constructible_v<T>) {
-            m_func = se.m_func;
+        if constexpr (std::is_nothrow_move_constructible_v<T>) {
+            m_func = std::forward<T>(se.m_func);
             m_is_active = se.m_is_active;
             se.release();
+        } else if constexpr (std::is_copy_constructible_v<T>) {
+            m_func = se.m_func;
+            m_is_active = se.m_is_active;
         }
     }
     scope_exit(const scope_exit&) = delete;
@@ -60,11 +62,14 @@ struct scope_success {
     scope_success(scope_success&& se) noexcept(
         noexcept(std::is_nothrow_move_constructible_v<T> ||
                  std::is_nothrow_copy_constructible_v<T>)) {
-        if constexpr (std::is_nothrow_move_constructible_v<T> ||
-                      std::is_copy_constructible_v<T>) {
+        if constexpr (std::is_nothrow_move_constructible_v<T>) {
             m_func = se.m_func;
             m_is_active = se.m_is_active;
             se.release();
+
+        } else if constexpr (std::is_copy_constructible_v<T>) {
+            m_func = se.m_func;
+            m_is_active = se.m_is_active;
         }
     }
     scope_success(const scope_success&) = delete;
@@ -100,11 +105,13 @@ struct scope_fail {
     scope_fail(scope_fail&& se) noexcept(
         noexcept(std::is_nothrow_move_constructible_v<T> ||
                  std::is_nothrow_copy_constructible_v<T>)) {
-        if constexpr (std::is_nothrow_move_constructible_v<T> ||
-                      std::is_copy_constructible_v<T>) {
+        if constexpr (std::is_nothrow_move_constructible_v<T>) {
             m_func = se.m_func;
             m_is_active = se.m_is_active;
             se.release();
+        } else if constexpr (std::is_copy_constructible_v<T>) {
+            m_func = se.m_func;
+            m_is_active = se.m_is_active;
         }
     }
     scope_fail(const scope_fail&) = delete;
