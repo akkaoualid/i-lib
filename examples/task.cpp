@@ -3,9 +3,9 @@
 #include <iostream>
 #include <string_view>
 
-ilib::task<std::string_view> get_sth() { co_return "hello"; }
+static ilib::task<std::string_view> get_sth() { co_return "hello"; }
 
-ilib::task<void> print_sth() {
+static ilib::task<void> print_sth() {
     auto out = co_await get_sth();
     std::cout << out;
 }

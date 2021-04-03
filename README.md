@@ -53,6 +53,21 @@ int main() {
 ```
 
 
+#### async_executor:
+wrap a sync function in a future and make it awaitable
+
+```cpp
+#include <ilib/async/executor.hpp>
+void sync_func() {
+    // do stuff
+}
+ilib::task<void> async_func() {
+    auto async_obj = ilib::async_executor(sync_func);
+    co_await async_obj();
+}
+```
+
+
 ### iterators:
 #### enumerator:
 ```cpp

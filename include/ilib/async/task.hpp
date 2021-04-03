@@ -17,7 +17,7 @@ namespace ilib {
 template <class>
 struct task;
 
-template <class T>
+template <class T = void>
 struct task_promise {
     task_promise() noexcept {}
     ~task_promise() noexcept { value.~T(); }
@@ -110,7 +110,7 @@ struct task {
     auto operator co_await() && noexcept {
         struct awaiter {
             awaiter(handle_t c) : coro_{c} {}
-            bool await_ready() noexcept { return false; }
+            bool await_ready() noexcept { return !coro_ || coro_.done(); }
             auto await_suspend(std::coroutine_handle<void> ch) noexcept {
                 coro_.promise().cont = ch;
                 return coro_;
