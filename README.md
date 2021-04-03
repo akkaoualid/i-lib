@@ -1,5 +1,5 @@
 # i-lib
-A custom library made for fun
+A custom library made for fun (still WIP)
 
 ![c++](https://img.shields.io/badge/-C++20-00599C?style=flat-square&logo=c)
 
