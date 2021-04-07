@@ -1,10 +1,12 @@
 #include <ilib/utility/scope.hpp>
 #include <iostream>
+#include <string>
 
 int main() {
-    auto fail = [] { std::cout << "fail\n"; };
-    auto ext = [] { std::cout << "ext\n"; };
-    auto suc = [] { std::cout << "success\n"; };
+    std::string str{"hello\n"};
+    auto fail = [&] { std::cout << str; };
+    auto ext = [&] { std::cout << str; };
+    auto suc = [&] { std::cout << str; };
 
     ilib::scope_exit fe{ext};
     ilib::scope_success fs{suc};

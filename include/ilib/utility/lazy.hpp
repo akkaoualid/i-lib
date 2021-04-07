@@ -7,17 +7,15 @@
 #include "utility.hpp"
 namespace ilib {
 template <class T, class... U>
-struct lazy;
-
-template <class T, class... U>
-struct lazy<T(U...)> {
+struct lazy {
     lazy() noexcept : func{nullptr} {}
-
+    /*! \brief constructs with a callable.*/
     template <class C>
     lazy(C&& callable) : func{ilib::forward<C>(callable)} {}
 
     ~lazy() noexcept { clear(); }
 
+    /*! \brief returns true if the 'lazy' containts a function.*/
     operator bool() noexcept { return static_cast<bool>(func); }
 
     lazy& operator=(decltype(nullptr)) noexcept {
@@ -25,17 +23,21 @@ struct lazy<T(U...)> {
         return *this;
     }
 
+    /*! \brief assign by moving the operand function.*/
     lazy& operator=(const lazy& rhs) {
         func = ilib::move(rhs.func);
-        last = rhs.last;
+        last = ilib::forward<T>(rhs.last);
         return *this;
     }
 
+    /*! \brief calls the stored function immediatly without checking for cached
+     * returns.*/
     template <class... P>
     auto operator()(P&&... args) {
         return force_call(ilib::forward<P>(args)...);
     }
 
+    /*! \brief calls the stored function if there is no cached return.*/
     template <class... P>
     T call(P&&... args) {
         if (last) {
@@ -46,6 +48,8 @@ struct lazy<T(U...)> {
         }
     }
 
+    /*! \brief calls the stored function immediatly without checking for cached
+     * returns.*/
     template <class... P>
     auto force_call(P&&... args)
         -> ilib::enable_if_t<(ilib::is_same_v<P, U> && ...), T> {
@@ -54,19 +58,16 @@ struct lazy<T(U...)> {
 
     constexpr bool is_cached() noexcept { return last.has_value(); }
 
-    constexpr void clear() noexcept {
-        func = nullptr;
-        last = std::nullopt;
-    }
+    constexpr void clear() noexcept { last = std::nullopt; }
 
     constexpr void clear_cache() noexcept { last = std::nullopt; }
 
    private:
-    std::function<T(U...)> func{};
+    T func{};
     std::optional<T> last{};
 };
 template <class... U>
-struct lazy<void(U...)> {
+struct lazy<void, U...> {
     lazy() noexcept : func{nullptr} {}
 
     template <class C>

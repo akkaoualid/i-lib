@@ -17,7 +17,7 @@ namespace ilib {
 template <class>
 struct task;
 
-template <class T = void>
+template <class T>
 struct task_promise {
     task_promise() noexcept {}
     ~task_promise() noexcept { value.~T(); }
@@ -104,13 +104,13 @@ struct task {
     using promise_type = task_promise<T>;
     using handle_t = std::coroutine_handle<promise_type>;
 
-    task(handle_t h) : coro{h} {}
+    explicit task(handle_t h) : coro{h} {}
     task(task&& t) noexcept : coro{std::exchange(t.coro, {})} {}
 
     auto operator co_await() && noexcept {
         struct awaiter {
-            awaiter(handle_t c) : coro_{c} {}
-            bool await_ready() noexcept { return !coro_ || coro_.done(); }
+            explicit awaiter(handle_t c) : coro_{c} {}
+            bool await_ready() noexcept { return false; }
             auto await_suspend(std::coroutine_handle<void> ch) noexcept {
                 coro_.promise().cont = ch;
                 return coro_;
@@ -130,14 +130,46 @@ struct task {
    private:
     handle_t coro;
 };
+template <>
+struct task<void> {
+    using promise_type = task_promise<void>;
+    using handle_t = std::coroutine_handle<promise_type>;
+
+    explicit task(handle_t h) : coro{h} {}
+    task(task&& t) noexcept : coro{std::exchange(t.coro, {})} {}
+
+    auto operator co_await() && noexcept {
+        struct awaiter {
+            explicit awaiter(handle_t c) : coro_{c} {}
+            bool await_ready() noexcept { return false; }
+            auto await_suspend(std::coroutine_handle<void> ch) noexcept {
+                coro_.promise().cont = ch;
+                return coro_;
+            }
+            void await_resume() noexcept { return; }
+
+           private:
+            handle_t coro_;
+        };
+        return awaiter{coro};
+    }
+
+    ~task() {
+        if (coro) coro.destroy();
+    }
+
+   private:
+    handle_t coro;
+};
 
 template <class T>
 task<T> task_promise<T>::get_return_object() noexcept {
-    return std::coroutine_handle<task_promise<T>>::from_promise(*this);
+    return task<T>{std::coroutine_handle<task_promise<T>>::from_promise(*this)};
 }
 
 task<void> task_promise<void>::get_return_object() noexcept {
-    return std::coroutine_handle<task_promise<void>>::from_promise(*this);
+    return task<void>{
+        std::coroutine_handle<task_promise<void>>::from_promise(*this)};
 }
 }  // namespace ilib
 #endif

@@ -4,10 +4,6 @@
 #include <memory>
 #include <utility>
 namespace ilib {
-namespace traits {
-template <class>
-class iterator;
-}
 namespace details {
 template <class T>
 struct enumerator_iter {
@@ -156,7 +152,12 @@ class enumerator {
     }
 };
 template <class T>
-enumerator(T b, T e) -> enumerator<T>;
+enumerator(T, T) -> enumerator<T>;
+
+template <class Range>
+auto enumerate(Range rng) {
+    return enumerator<Range>(rng.begin(), rng.end());
+}
 }  // namespace ilib
 
 #endif

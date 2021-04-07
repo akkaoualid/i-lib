@@ -55,10 +55,12 @@ struct sync_wait_impl {
         std::mutex mtx{};
         std::condition_variable cv{};
         std::exception_ptr error{};
-        bool done{};
+        bool done = false;
     };
     using handle_t = std::coroutine_handle<promise_type>;
+
     sync_wait_impl(handle_t c) : coro{c} {}
+
     sync_wait_impl(sync_wait_impl&& sw) noexcept
         : coro{std::exchange(sw.coro, {})} {}
 
