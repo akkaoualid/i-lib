@@ -17,7 +17,7 @@ inline void do_assert_(bool c_, source_loc_ sl, const char* msg) {
     if (!c_)
         std::fprintf(stderr,
                      "[ilib::assert] %s:%zu: assertion failed '%s' in function "
-                     "'%s' - %s",
+                     "'%s' %s",
                      sl.file_, sl.line_, sl.expression_, sl.func_, msg);
 }
 
@@ -26,6 +26,10 @@ inline void do_assert_(bool c_, source_loc_ sl, const char* msg) {
 
 }  // namespace detail
 }  // namespace ilib
+#define ILIB_FWD(...) std::forward<decltype(__VA_ARGS__)>(__VA_ARGS__)
+#define ILIB_LIFT(...)                    \
+    [](auto&&... args) noexcept(noexcept( \
+                           __VA_ARGS__(ILIB_FWD(args...))) -> decltype(__VA_ARGS__(ILIB_FWD(args...))) { return __VA_ARGS__(ILIB_FWD(args...)); }
 namespace ilib {
 template <class T>
 constexpr T&& forward(ilib::remove_reference_t<T>& t) noexcept {

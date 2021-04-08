@@ -104,8 +104,8 @@ struct unique_resource {
                                    std::is_nothrow_default_constructible_v<D>)
         : m_src{}, m_deleter{} {}
 
-    template <class RR, class DD>
     // clang-format off
+    template <class RR, class DD>
     unique_resource(RR&& r, DD&& d) noexcept(
         (std::is_nothrow_copy_constructible_v<R, RR> ||
          std::is_nothrow_copy_constructible_v<D, DD>)
@@ -116,12 +116,20 @@ struct unique_resource {
     : m_src{std::forward<RR>(r)}, m_deleter{std::forward<DD>(d)} {}
     // clang-format on
 
-    const R& get() const { return m_src; }
+    const R& get() const noexcept {
+        if constexpr (std::is_reference_v<R>)
+            return m_src.get();
+        else
+            return m_src;
+    }
 
-    ~unique_resource() { m_deleter(m_src); }
+    ~unique_resource() noexcept(noexcept(m_deleter(m_src))) {
+        m_deleter(m_src);
+    }
 
    private:
-    R m_src;
+    std::conditional_t<std::is_reference_v<R>, std::refrence_wrapper<R>, R>
+        m_src;
     D m_deleter;
 };
 template <class F>
