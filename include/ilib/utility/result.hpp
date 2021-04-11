@@ -25,28 +25,31 @@ struct res_exception : std::exception {
 template <class T>
 struct Ok {
     // clang-format off
-    template<class U> requires std::is_convertible_v<U, T>
-    explicit constexpr Ok(U&& arg) noexcept(std::is_nothrow_constructible_v<T>)
+    template<class U> requires std::is_constructible_v<U, T>
+    explicit constexpr Ok(U&& arg) noexcept(std::is_nothrow_constructible_v<T, U>)
         : value{std::forward<T>(arg)} {}
 
-    template<class U> requires std::is_convertible_v<U, T>
+    template<class U> requires std::is_constructible_v<U, T>
     explicit constexpr Ok(const Ok<U>& other) noexcept
         : value{other.value} {}
 
     explicit constexpr Ok() noexcept(std::is_nothrow_default_constructible_v<T>)
         : value{} {}
 
+    operator T() { return value; }
+
     T value;
+};
 };
 template <class T>
 struct Err {
     // clang-format off
-    template<class U> requires std::is_convertible_v<U, T>
-    explicit constexpr Err(U&& arg) noexcept(std::is_nothrow_constructible_v<T>)
+    template<class U> requires std::is_constructible_v<U, T>
+    explicit constexpr Err(U&& arg) noexcept(std::is_nothrow_constructible_v<T, U>)
         : value{std::forward<T>(arg)} {}
 
 
-    template<class U> requires std::is_convertible_v<U, T>
+    template<class U> requires std::is_constructible_v<U, T>
     explicit constexpr Err(const Err<U>& other) noexcept
         : value{other.value} {}
 
@@ -54,6 +57,7 @@ struct Err {
     explicit constexpr Err() noexcept(
         std::is_nothrow_default_constructible_v<T>)
         : value{} {}
+    operator T() { return value; }
 
     T value;
 };
@@ -64,26 +68,30 @@ Err(T) -> Err<T>;
 template <class T>
 Ok(T) -> Ok<T>;
 
-template <class T, class U>
+template <class Tp, class Up>
 struct Result {
+    using T = std::conditional_t<std::is_reference_v<Tp>,
+                                 std::reference_wrapper<Tp>, Tp>;
+    using U = std::conditional_t<std::is_reference_v<Up>,
+                                 std::reference_wrapper<Up>, Up>;
     // clang-format off
-    template<class R> requires std::is_convertible_v<R, T>
+    template<class R> requires std::is_constructible_v<R, T>
     constexpr Result(Ok<R>&& ok) noexcept(
         std::is_nothrow_constructible_v<Ok<T>, T>)
         : m_is_ok{true}, m_ok_ins{std::exchange(ok.value, {})}, m_is_err{} {}
 
-    template<class R> requires std::is_convertible_v<R, T>
+    template<class R> requires std::is_constructible_v<R, T>
     constexpr Result(const Ok<R>& ok) noexcept(
         std::is_nothrow_constructible_v<Ok<T>, T>)
         : m_is_ok{true}, m_ok_ins{ok}, m_is_err{} {}
 
-    template<class R> requires std::is_convertible_v<R, U>
+    template<class R> requires std::is_constructible_v<R, U>
     constexpr Result(Err<R>&& err) noexcept(
         std::is_nothrow_constructible_v<Err<U>, U>)
         : m_is_ok{}, m_is_err{true}, m_err_ins{std::exchange(err.value, {})} {}
 
 
-    template<class R> requires std::is_convertible_v<R, U>
+    template<class R> requires std::is_constructible_v<R, U>
     constexpr Result(const Err<R>& err) noexcept(
         std::is_nothrow_constructible_v<Err<U>, U>)
         : m_is_ok{}, m_is_err{true}, m_err_ins{err} {}
@@ -155,14 +163,8 @@ struct Result {
 
     template<class R, class E> requires std::is_convertible_v<R, T> 
         && std::is_convertible_v<E, U>
-    constexpr Result& operator=(const Result<R, E>& other) noexcept {
-        if(is_ok() && other.is_ok()) {
-            m_ok_ins = other.m_ok_ins;
-        } else if(is_err() && other.is_err()) {
-            m_err_ins = other.m_err_ins;
-        }
-        m_is_ok = other.m_is_ok;
-        m_is_err = other.m_is_err;
+    constexpr Result& operator=(Result<R, E> other) noexcept {
+        swap(std::move(other));
         return *this;
     }
 
@@ -187,13 +189,13 @@ struct Result {
             throw detail::res_exception("bad Result access");
     }
 
-    constexpr const T& unwrap_err() const& {
+    constexpr const U& unwrap_err() const& {
         if (is_err())
             return m_err_ins.value;
         else
             throw detail::res_exception("bad Result access");
     }
-    constexpr T&& unwrap_err() && {
+    constexpr U&& unwrap_err() && {
         if (is_err())
             return std::move(m_err_ins.value);
         else
@@ -280,6 +282,7 @@ struct Result {
             return m_err_ins;
         }
     }
+
     template <class E>
     constexpr auto and_(const Result<E, U>& res) const noexcept
         -> Result<E, U> {
