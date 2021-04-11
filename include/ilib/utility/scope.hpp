@@ -100,13 +100,14 @@ struct scope_fail {
 };
 template <class R, class D>
 struct unique_resource {
-    unique_resource() noexcept(std::is_nothrow_default_constructible_v<R>&&
-                                   std::is_nothrow_default_constructible_v<D>)
+    constexpr unique_resource() noexcept(
+        std::is_nothrow_default_constructible_v<R>&&
+            std::is_nothrow_default_constructible_v<D>)
         : m_src{}, m_deleter{} {}
 
     // clang-format off
-    template <class RR, class DD>
-    unique_resource(RR&& r, DD&& d) noexcept(
+    template <class RR, class DD> requires std::is_convertible_v<RR, R> && std::is_convertible_v<DD, D>
+    constexpr unique_resource(RR&& r, DD&& d) noexcept(
         (std::is_nothrow_copy_constructible_v<R, RR> ||
          std::is_nothrow_copy_constructible_v<D, DD>)
         &&
@@ -116,14 +117,32 @@ struct unique_resource {
     : m_src{std::forward<RR>(r)}, m_deleter{std::forward<DD>(d)} {}
     // clang-format on
 
-    const R& get() const noexcept {
+    constexpr const R& get() const& noexcept {
         if constexpr (std::is_reference_v<R>)
             return m_src.get();
         else
             return m_src;
     }
 
-    ~unique_resource() noexcept(noexcept(m_deleter(m_src))) {
+    constexpr R& get() noexcept {
+        if constexpr (std::is_reference_v<R>)
+            return m_src.get();
+        else
+            return m_src;
+    }
+
+    constexpr R&& get() && noexcept {
+        if constexpr (std::is_reference_v<R>)
+            return std::move(m_src.get());
+        else
+            return std::move(m_src);
+    }
+
+    constexpr const D& get_deleter() const noexcept { return m_deleter; }
+
+    constexpr D& get_deleter() noexcept { return m_deleter; }
+
+    ~unique_resource() noexcept(std::is_nothrow_invocable_v<D, R>) {
         m_deleter(m_src);
     }
 

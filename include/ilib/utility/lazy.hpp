@@ -1,13 +1,15 @@
 #ifndef G37379393900_F738393903030_A738393020200
 #define G37379393900_F738393903030_A738393020200
 #include <functional>
-#include <optional>
 
+#include "option.hpp"
 #include "traits.hpp"
 #include "utility.hpp"
 namespace ilib {
+template <class...>
+struct lazy;
 template <class T, class... U>
-struct lazy {
+struct lazy<T(U...)> {
     lazy() noexcept : func{nullptr} {}
     /*! \brief constructs with a callable.*/
     template <class C>
@@ -56,18 +58,21 @@ struct lazy {
         return func(ilib::forward<P>(args)...);
     }
 
-    constexpr bool is_cached() noexcept { return last.has_value(); }
+    constexpr bool is_cached() noexcept { return last.is_some(); }
 
-    constexpr void clear() noexcept { last = std::nullopt; }
+    constexpr void clear() noexcept {
+        func = nullptr;
+        last = ilib::None;
+    }
 
-    constexpr void clear_cache() noexcept { last = std::nullopt; }
+    constexpr void clear_cache() noexcept { last = ilib::None; }
 
    private:
     T func{};
-    std::optional<T> last{};
+    ilib::Option<T> last{};
 };
 template <class... U>
-struct lazy<void, U...> {
+struct lazy<void(U...)> {
     lazy() noexcept : func{nullptr} {}
 
     template <class C>
