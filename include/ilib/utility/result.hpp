@@ -220,18 +220,18 @@ struct Result {
         if (is_ok())
             return m_ok_ins.value;
         else
-            return std::forward<std::invoke_result_t<F, U>>(
-                std::forward<F>(func)(m_err_ins.value));
+            return 
+                std::forward<F>(func)(m_err_ins.value);
     }
 
     template <class F>
     requires std::is_convertible_v<std::invoke_result_t<F, U>, T> 
-    constexpr const T& unwrap_or_else(F&& func) && noexcept(std::is_nothrow_invocable_v<F, U>) {
+    constexpr T&& unwrap_or_else(F&& func) && noexcept(std::is_nothrow_invocable_v<F, U>) {
         if (is_ok())
             return std::move(m_ok_ins.value);
         else
-            return std::forward<std::invoke_result_t<F, U>>(
-                std::forward<F>(func)(m_err_ins.value));
+            return 
+                std::forward<F>(func)(m_err_ins.value);
     }
 
     // clang-format on
