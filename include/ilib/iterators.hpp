@@ -13,12 +13,11 @@ struct enumerator_iter {
     using difference_type = typename std::iterator_traits<T>::difference_type;
     using pointer = typename std::iterator_traits<T>::pointer;
     using reference = typename std::iterator_traits<T>::reference;
-    using iterator_category =
-        typename std::iterator_traits<T>::iterator_category;
+    using iterator_category = typename std::iterator_traits<T>::iterator_category;
 
     enumerator_iter(const T& it) noexcept : iter(it) {}
-    constexpr auto operator*() const
-        -> std::pair<std::size_t, reference> requires requires {
+    constexpr auto operator*() const -> std::pair<std::size_t, reference>
+    requires requires {
         *iter;
     }
     { return {count, *iter}; }
@@ -43,8 +42,7 @@ struct enumerator_iter {
         iter++;
         return temp;
     }
-    constexpr auto operator+=(difference_type n)
-        -> enumerator_iter& requires requires {
+    constexpr auto operator+=(difference_type n) -> enumerator_iter& requires requires {
         iter += n;
     }
     {
@@ -74,8 +72,7 @@ struct enumerator_iter {
         iter--;
         return temp;
     }
-    constexpr auto operator-=(difference_type n)
-        -> enumerator_iter& requires requires {
+    constexpr auto operator-=(difference_type n) -> enumerator_iter& requires requires {
         iter -= n;
     }
     {
@@ -85,19 +82,16 @@ struct enumerator_iter {
             count -= n;
         iter -= n;
     }
-    constexpr bool operator!=(const enumerator_iter& rhs) const noexcept
-        requires requires {
+    constexpr bool operator!=(const enumerator_iter& rhs) const noexcept requires requires {
         iter != iter;
     }
     { return (iter != rhs.iter); }
-    constexpr bool operator==(const enumerator_iter& rhs) const noexcept
-        requires requires {
+    constexpr bool operator==(const enumerator_iter& rhs) const noexcept requires requires {
         iter == iter;
     }
     { return (iter == rhs.iter); }
-    constexpr auto friend operator+(const enumerator_iter& lhs,
-                                    difference_type n) -> enumerator_iter
-        requires requires {
+    constexpr auto friend operator+(const enumerator_iter& lhs, difference_type n)
+        -> enumerator_iter requires requires {
         iter + n;
     }
     {
@@ -107,9 +101,8 @@ struct enumerator_iter {
         return it;
     }
 
-    constexpr auto friend operator-(const enumerator_iter& lhs,
-                                    difference_type n) -> enumerator_iter
-        requires requires {
+    constexpr auto friend operator-(const enumerator_iter& lhs, difference_type n)
+        -> enumerator_iter requires requires {
         iter - n;
     }
     {
@@ -121,15 +114,13 @@ struct enumerator_iter {
         lhs.iter - n;
         return it;
     }
-    constexpr auto friend operator+(difference_type n,
-                                    const enumerator_iter& rhs)
+    constexpr auto friend operator+(difference_type n, const enumerator_iter& rhs)
         -> enumerator_iter requires requires {
         n + iter;
     }
     { return rhs + n; }
 
-    constexpr auto friend operator-(difference_type n,
-                                    const enumerator_iter& rhs)
+    constexpr auto friend operator-(difference_type n, const enumerator_iter& rhs)
         -> enumerator_iter requires requires {
         n - iter;
     }
@@ -158,6 +149,65 @@ template <class Range>
 auto enumerate(Range rng) {
     return enumerator<Range>(rng.begin(), rng.end());
 }
+
+struct unspecified_range_t {
+    constexpr unspecified_range_t(int) {}
+
+    template <class T>
+    requires std::is_intergal_v<T>
+    bool operator==(T) {
+        return false;
+    }
+};
+
+constexpr unspecified_range_t _{0};
+template <class T = int>
+struct range_iter {
+    constexpr range_iter(T s) : current_{s} {}
+
+    constexpr range_iter(unspecified_range_t) : current_{0} {}
+
+    constexpr range_iter& operator++() {
+        ++current_;
+        return *this;
+    }
+
+    constexpr range_iter operator++(int) {
+        auto t = *this;
+        ++current_;
+        return t;
+    }
+
+    constexpr range_iter& operator--() {
+        --current_;
+        return *this;
+    }
+
+    constexpr range_iter operator--(int) {
+        auto t = *this;
+        --current_;
+        return t;
+    }
+
+    constexpr bool operator==(const range_iter& other) {
+        return current_ == other.current_;
+    }
+
+    constexpr T operator*() {
+        return current_;
+    }
+
+   private:
+    T current_;
+    U max_;
+};
+template <class T = int, class U = T>
+struct range {
+    constexpr range(T t, U u) : rng{t, u} {}
+
+   private:
+    range_iter<T> rng;
+};
 }  // namespace ilib
 
 #endif

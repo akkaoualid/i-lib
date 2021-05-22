@@ -20,17 +20,22 @@ struct task;
 template <class T>
 struct task_promise {
     task_promise() noexcept {}
-    ~task_promise() noexcept { value.~T(); }
+    ~task_promise() noexcept {
+        value.~T();
+    }
 
-    auto initial_suspend() { return std::suspend_always{}; }
+    auto initial_suspend() {
+        return std::suspend_always{};
+    }
 
     task<T> get_return_object() noexcept;
 
     auto final_suspend() noexcept {
         struct awaiter {
-            bool await_ready() noexcept { return false; }
-            auto await_suspend(
-                std::coroutine_handle<task_promise> ch) noexcept {
+            bool await_ready() noexcept {
+                return false;
+            }
+            auto await_suspend(std::coroutine_handle<task_promise> ch) noexcept {
                 return ch.promise().cont;
             }
             void await_resume() noexcept {}
@@ -38,24 +43,21 @@ struct task_promise {
         return awaiter{};
     }
 
-    void unhandled_exception() noexcept { error = std::current_exception(); }
+    void unhandled_exception() {
+        throw;
+    }
 
     template <class U>
-    auto return_value(U&& arg)
-        -> std::enable_if_t<std::is_convertible<U, T>::value, void> {
+    auto return_value(U&& arg) -> std::enable_if_t<std::is_convertible<U, T>::value, void> {
         new (static_cast<void*>(std::addressof(value))) T(std::forward<U>(arg));
     }
 
-    T get() {
-        if (error)
-            std::rethrow_exception(error);
-        else
-            return value;
+    const T& get() noexcept {
+        return value;
     }
 
    private:
     friend task<T>;
-    std::exception_ptr error;
     std::coroutine_handle<void> cont;
     union {
         T value;
@@ -66,15 +68,18 @@ struct task_promise<void> {
     task_promise() noexcept {}
     ~task_promise() noexcept {}
 
-    auto initial_suspend() { return std::suspend_always{}; }
+    auto initial_suspend() {
+        return std::suspend_always{};
+    }
 
     task<void> get_return_object() noexcept;
 
     auto final_suspend() noexcept {
         struct awaiter {
-            bool await_ready() noexcept { return false; }
-            auto await_suspend(
-                std::coroutine_handle<task_promise> ch) noexcept {
+            bool await_ready() noexcept {
+                return false;
+            }
+            auto await_suspend(std::coroutine_handle<task_promise> ch) noexcept {
                 return ch.promise().cont;
             }
             void await_resume() noexcept {}
@@ -82,21 +87,19 @@ struct task_promise<void> {
         return awaiter{};
     }
 
-    void unhandled_exception() noexcept { error = std::current_exception(); }
-
-    void return_void() { return; }
-
-    void get() {
-        if (error)
-            std::rethrow_exception(error);
-        else
-            return;
+    void unhandled_exception() {
+        throw;
     }
+
+    void return_void() {
+        return;
+    }
+
+    void get() noexcept {}
 
    private:
     friend task<void>;
     std::coroutine_handle<void> cont;
-    std::exception_ptr error;
 };
 
 template <class T>
@@ -110,12 +113,16 @@ struct task {
     auto operator co_await() && noexcept {
         struct awaiter {
             explicit awaiter(handle_t c) : coro_{c} {}
-            bool await_ready() noexcept { return false; }
+            bool await_ready() noexcept {
+                return false;
+            }
             auto await_suspend(std::coroutine_handle<void> ch) noexcept {
                 coro_.promise().cont = ch;
                 return coro_;
             }
-            T await_resume() noexcept { return coro_.promise().get(); }
+            T await_resume() noexcept {
+                return coro_.promise().get();
+            }
 
            private:
             handle_t coro_;
@@ -141,12 +148,16 @@ struct task<void> {
     auto operator co_await() && noexcept {
         struct awaiter {
             explicit awaiter(handle_t c) : coro_{c} {}
-            bool await_ready() noexcept { return false; }
+            bool await_ready() noexcept {
+                return false;
+            }
             auto await_suspend(std::coroutine_handle<void> ch) noexcept {
                 coro_.promise().cont = ch;
                 return coro_;
             }
-            void await_resume() noexcept { return; }
+            void await_resume() noexcept {
+                return;
+            }
 
            private:
             handle_t coro_;
@@ -168,8 +179,7 @@ task<T> task_promise<T>::get_return_object() noexcept {
 }
 
 task<void> task_promise<void>::get_return_object() noexcept {
-    return task<void>{
-        std::coroutine_handle<task_promise<void>>::from_promise(*this)};
+    return task<void>{std::coroutine_handle<task_promise<void>>::from_promise(*this)};
 }
 }  // namespace ilib
 #endif

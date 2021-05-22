@@ -3,11 +3,15 @@
 #include <iostream>
 #include <string_view>
 
-ilib::task<std::string_view> get_sth() { co_return "hello"; }
-
-ilib::task<void> print_sth() {
-    // auto out = co_await get_sth();
-    std::cout << "hello\n";
+ilib::task<std::string_view> get_sth() {
+    co_return "hello";
 }
 
-int main() { ilib::sync_wait(print_sth()); }
+ilib::task<void> print_sth() {
+    auto out = co_await get_sth();
+    std::cout << out;
+}
+
+int main() {
+    ilib::sync_wait(print_sth());
+}

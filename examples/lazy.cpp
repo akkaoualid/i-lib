@@ -1,7 +1,9 @@
 #include <ilib/utility/lazy.hpp>
 #include <iostream>
 
-void get_sth() { std::cout << "get_sth\n"; }
+void get_sth() {
+    std::cout << "get_sth\n";
+}
 
 int main() {
     ilib::lazy<void()> l{get_sth};

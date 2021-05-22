@@ -11,30 +11,41 @@ using std::experimental::suspend_never;
 }  // namespace std
 #endif
 #include <exception>
+#include <ilib/utility/lifetime.hpp>
 #include <utility>
 namespace ilib {
 template <class T>
 struct generator {
     struct promise_type {
-        T cur_value{};
+        ilib::lifetime<T> cur_value;
         auto yield_value(T value) {
-            cur_value = value;
+            cur_value.construct(value);
             return std::suspend_always{};
         }
-        auto initial_suspend() noexcept { return std::suspend_always{}; }
-        auto final_suspend() noexcept { return std::suspend_always{}; }
+        auto initial_suspend() noexcept {
+            return std::suspend_always{};
+        }
+        auto final_suspend() noexcept {
+            return std::suspend_always{};
+        }
         void return_void() noexcept {}
-        generator get_return_object() noexcept { return generator{this}; }
-        void unhandled_exception() { throw; }
+
+        generator get_return_object() noexcept {
+            return generator{this};
+        }
+        void unhandled_exception() {
+            throw;
+        }
+
+        ~promise_type() {
+            cur_value.destruct();
+        }
     };
 
     using handle_t = std::coroutine_handle<promise_type>;
-    generator(generator&& gen) noexcept
-        : coro(std::exchange(gen.coro, nullptr)) {}
+    generator(generator&& gen) noexcept : coro(std::exchange(gen.coro, nullptr)) {}
     ~generator() noexcept {
-        if (coro) {
-            coro.destroy();
-        }
+        if (coro) { coro.destroy(); }
     }
 
     struct iterator {
@@ -48,17 +59,27 @@ struct generator {
             return *this;
         }
 
-        bool operator==(const iterator& rhs) const { return done == rhs.done; }
-        bool operator!=(const iterator& rhs) const { return done != rhs.done; }
+        bool operator==(const iterator& rhs) const {
+            return done == rhs.done;
+        }
+        bool operator!=(const iterator& rhs) const {
+            return done != rhs.done;
+        }
 
-        const T* operator->() const { return std::addressof(*this); }
-        const T& operator*() const { return coro.promise().cur_value; }
+        const T* operator->() const {
+            return std::addressof(*this);
+        }
+        const T& operator*() const {
+            return coro.promise().cur_value.get();
+        }
     };
     iterator begin() {
         coro.resume();
         return {coro, coro.done()};
     }
-    iterator end() { return iterator{}; }
+    iterator end() {
+        return iterator{};
+    }
 
    private:
     explicit generator(promise_type* pt) : coro(handle_t::from_promise(*pt)) {}

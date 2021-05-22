@@ -1,6 +1,6 @@
 #ifndef H7393030300_D7393930020200_R739202030030393
 #define H7393030300_D7393930020200_R739202030030393
-#include <cstdio>
+#include <cstddef>
 #include <iterator>
 #include <type_traits>
 /*
@@ -13,14 +13,13 @@
         using value_type = std::remove_cv_t<T>;  \
         using reference = value_type&;           \
         using const_reference = const reference; \
-        using size_type = unsigned long;         \
+        using size_type = std::size_t;           \
         using difference_type = std::ptrdiff_t;
 
 #define ILIB_ALLOCATOR(allocator)                                            \
     using allocator_type = allocator;                                        \
     using pointer = typename std::allocator_trairs<allocator_type>::pointer; \
-    using const_pointer =                                                    \
-        typename std::allocator_trairs<allocator_type>::const_pointer;
+    using const_pointer = typename std::allocator_trairs<allocator_type>::const_pointer;
 
 #define ILIB_ITERATOR(IT)                                     \
     using iterator = IT;                                      \
@@ -28,7 +27,6 @@
     using reverse_iterator = std::reverse_iterator<iterator>; \
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-#define ILIB_CONTAINER_END() \
-    }                        \
-    ;
+// clang-format off
+#define ILIB_CONTAINER_END };
 #endif

@@ -43,7 +43,9 @@ struct Some {
 
     // clang-format on
 
-    constexpr const T& get_value() const noexcept { return m_value; }
+    constexpr const T& get_value() const noexcept {
+        return m_value;
+    }
 
    private:
     T m_value;
@@ -52,10 +54,9 @@ struct Some {
 template <class T>
 Some(T) -> Some<T>;
 
-template <class T>
+template <class Tp>
 struct Option {
-    using value_type = std::conditional_t<std::is_reference_v<T>,
-                                          std::reference_wrapper<T>, T>;
+    using T = std::conditional_t<std::is_reference_v<Tp>, std::reference_wrapper<Tp>, Tp>;
 
     constexpr Option(NoneT) noexcept : m_has_value{false} {}
 
@@ -75,9 +76,13 @@ struct Option {
         : m_has_value{other.m_has_value}, m_value{std::move(other.m_value)} {}
 
     // clang-format on
-    constexpr bool is_none() const noexcept { return !m_has_value; }
+    constexpr bool is_none() const noexcept {
+        return !m_has_value;
+    }
 
-    constexpr bool is_some() const noexcept { return m_has_value; }
+    constexpr bool is_some() const noexcept {
+        return m_has_value;
+    }
 
     constexpr const T& expect(std::string_view msg) const& {
         if (is_some()) {
@@ -135,8 +140,7 @@ struct Option {
             return None;
     }
 
-    constexpr auto as_cref() noexcept
-        -> Option<std::reference_wrapper<const T>> {
+    constexpr auto as_cref() noexcept -> Option<std::reference_wrapper<const T>> {
         if (is_some())
             return Some(std::cref(m_value));
         else
@@ -152,10 +156,11 @@ struct Option {
         }
     }
 
-    constexpr T operator*() const noexcept(is_some()) { return unwrap(); }
+    constexpr T operator*() const noexcept(is_some()) {
+        return unwrap();
+    }
 
-    constexpr void swap(Option& other) noexcept(
-        std::is_nothrow_swappable_v<T>) {
+    constexpr void swap(Option& other) noexcept(std::is_nothrow_swappable_v<T>) {
         using std::swap;
         if (is_some() && other.is_some()) {
             swap(m_value, other.m_value);
@@ -168,9 +173,8 @@ struct Option {
         }
     }
 
-    constexpr Option& operator=(Option&& other) noexcept(
-        std::is_nothrow_move_assignable_v<T> ||
-        std::is_nothrow_move_constructible_v<T>) {
+    constexpr Option& operator=(Option&& other) noexcept(std::is_nothrow_move_assignable_v<T> ||
+                                                         std::is_nothrow_move_constructible_v<T>) {
         if (is_some()) {
             m_value = std::move(other.unwrap());
         } else if (other.is_some()) {
@@ -189,7 +193,9 @@ struct Option {
         return *this;
     }
 
-    constexpr Option& operator=(NoneT) noexcept { reset(); }
+    constexpr Option& operator=(NoneT) noexcept {
+        reset();
+    }
 
     constexpr bool operator==(const Some<T>& other) const noexcept {
         return contains(other.get_value());
@@ -202,7 +208,9 @@ struct Option {
             return false;
     }
 
-    constexpr bool operator==(NoneT) const noexcept { return is_none(); }
+    constexpr bool operator==(NoneT) const noexcept {
+        return is_none();
+    }
 
     constexpr bool contains(const T& value) const noexcept {
         if (is_some())
@@ -211,8 +219,7 @@ struct Option {
             return false;
     }
     template <class... Args>
-    constexpr auto emplace(Args&&... args)
-        -> std::enable_if_t<std::is_constructible_v<T, Args...>> {
+    constexpr auto emplace(Args&&... args) -> std::enable_if_t<std::is_constructible_v<T, Args...>> {
         if (is_some()) std::destroy_at(std::addressof(m_value));
         m_construct_at(std::addressof(m_value), args...);
     }
@@ -225,8 +232,7 @@ struct Option {
     }
 
     template <class U>
-    constexpr Option& replace(U&& value) noexcept(
-        std::is_nothrow_move_assignable_v<T, U>) {
+    constexpr Option& replace(U&& value) {
         if (is_some())
             m_value = std::forward(value);
         else
@@ -241,9 +247,7 @@ struct Option {
     }
 
     template <class F>
-    constexpr auto and_then(F&& func) const
-        noexcept(std::is_nothrow_invocable_v<F, T>)
-            -> std::invoke_result_t<F, T> {
+    constexpr auto and_then(F&& func) const noexcept(std::is_nothrow_invocable_v<F, T>) -> std::invoke_result_t<F, T> {
         if (is_some()) return std::forward<F>(func)(unwrap());
         return None;
     }
@@ -256,8 +260,7 @@ struct Option {
     }
 
     template <class F>
-    constexpr Option<T> or_else(F&& func) const& noexcept(
-        std::is_nothrow_invocable_v<F>) {
+    constexpr Option<T> or_else(F&& func) const& noexcept(std::is_nothrow_invocable_v<F>) {
         if (is_some())
             return *this;
         else
@@ -271,8 +274,7 @@ struct Option {
     }
 
     template <class F>
-    constexpr Option<T> or_else(F&& func) && noexcept(
-        std::is_nothrow_invocable_v<F>) {
+    constexpr Option<T> or_else(F&& func) && noexcept(std::is_nothrow_invocable_v<F>) {
         if (is_some())
             return std::move(*this);
         else
@@ -291,8 +293,7 @@ struct Option {
     bool m_has_value;
     template <class... Args>
     constexpr T* m_construct_at(T* p, Args&&... args) {
-        return ::new (const_cast<void*>(static_cast<const volatile void*>(p)))
-            T(std::forward<Args>(args)...);
+        return ::new (const_cast<void*>(static_cast<const volatile void*>(p))) T(std::forward<Args>(args)...);
     }
 };
 }  // namespace ilib

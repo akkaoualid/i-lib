@@ -1,5 +1,5 @@
-#ifndef H_4747488489949_ % $DUEUEIEIK_7383839_GEURURIRIIR
-#define H_4747488489949_ % $DUEUEIEIK_7383839_GEURURIRIIR
+#ifndef H_4747488489949_DUEUEIEIK_7383839_GEURURIRIIR
+#define H_4747488489949_DUEUEIEIK_7383839_GEURURIRIIR
 #if __has_include(<coroutine>)
 #include <coroutine>
 #else
@@ -17,18 +17,20 @@ namespace ilib {
 struct sync_wait_impl {
     struct promise_type {
         sync_wait_impl get_return_object() {
-            return sync_wait_impl{
-                std::coroutine_handle<promise_type>::from_promise(*this)};
+            return sync_wait_impl{std::coroutine_handle<promise_type>::from_promise(*this)};
         }
 
-        std::suspend_always initial_suspend() { return {}; }
+        std::suspend_always initial_suspend() {
+            return {};
+        }
 
         void return_void() noexcept {}
         auto final_suspend() noexcept {
             struct awaiter {
-                bool await_ready() noexcept { return false; }
-                auto await_suspend(
-                    std::coroutine_handle<promise_type> h) noexcept {
+                bool await_ready() noexcept {
+                    return false;
+                }
+                auto await_suspend(std::coroutine_handle<promise_type> h) noexcept {
                     auto& promise = h.promise();
                     std::lock_guard lk{promise.mtx};
                     promise.done = true;
@@ -39,30 +41,25 @@ struct sync_wait_impl {
             return awaiter{};
         }
 
-        void unhandled_exception() noexcept {
-            error = std::current_exception();
+        void unhandled_exception() {
+            throw;
         }
 
         void wait() {
             std::unique_lock lk{mtx};
-            while (!done) {
-                cv.wait(lk);
-            }
-            if (error) std::rethrow_exception(error);
+            while (!done) { cv.wait(lk); }
         }
 
        private:
         std::mutex mtx{};
         std::condition_variable cv{};
-        std::exception_ptr error{};
         bool done = false;
     };
     using handle_t = std::coroutine_handle<promise_type>;
 
     sync_wait_impl(handle_t c) : coro{c} {}
 
-    sync_wait_impl(sync_wait_impl&& sw) noexcept
-        : coro{std::exchange(sw.coro, {})} {}
+    sync_wait_impl(sync_wait_impl&& sw) noexcept : coro{std::exchange(sw.coro, {})} {}
 
     void wait() {
         coro.resume();
