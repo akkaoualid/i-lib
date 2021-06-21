@@ -1,18 +1,10 @@
 #ifndef JPRP47383893_KDJRJRJ_48483883
 #define JPRP47383893_KDJRJRJ_48483883
-#if __has_include(<coroutine>)
-#include <coroutine>
-#else
-#include <experimental/coroutine>
-namespace std {
-using std::experimental::coroutine_handle;
-using std::experimental::suspend_always;
-using std::experimental::suspend_never;
-}  // namespace std
-#endif
 #include <exception>
-#include <ilib/utility/lifetime.hpp>
+#include <ilib/lifetime.hpp>
 #include <utility>
+
+#include "includes.hpp"
 namespace ilib {
 template <class T>
 struct generator {
@@ -20,13 +12,13 @@ struct generator {
         ilib::lifetime<T> cur_value;
         auto yield_value(T value) {
             cur_value.construct(value);
-            return std::suspend_always{};
+            return coro::suspend_always{};
         }
         auto initial_suspend() noexcept {
-            return std::suspend_always{};
+            return coro::suspend_always{};
         }
         auto final_suspend() noexcept {
-            return std::suspend_always{};
+            return coro::suspend_always{};
         }
         void return_void() noexcept {}
 
@@ -42,20 +34,20 @@ struct generator {
         }
     };
 
-    using handle_t = std::coroutine_handle<promise_type>;
-    generator(generator&& gen) noexcept : coro(std::exchange(gen.coro, nullptr)) {}
+    using handle_t = coro::coroutine_handle<promise_type>;
+    generator(generator&& gen) noexcept : coro_{std::exchange(gen.coro_, nullptr)} {}
     ~generator() noexcept {
-        if (coro) { coro.destroy(); }
+        if (coro_) { coro_.destroy(); }
     }
 
     struct iterator {
         bool done{};
-        handle_t coro{};
+        handle_t coro_{};
         explicit iterator() : done(true) {}
-        iterator(handle_t c_, bool d_) : coro(c_), done(d_) {}
+        iterator(handle_t c_, bool d_) : coro_(c_), done(d_) {}
         iterator& operator++() {
-            coro.resume();
-            done = coro.done();
+            coro_.resume();
+            done = coro_.done();
             return *this;
         }
 
@@ -70,20 +62,20 @@ struct generator {
             return std::addressof(*this);
         }
         const T& operator*() const {
-            return coro.promise().cur_value.get();
+            return coro_.promise().cur_value.get();
         }
     };
     iterator begin() {
-        coro.resume();
-        return {coro, coro.done()};
+        coro_.resume();
+        return {coro_, coro_.done()};
     }
     iterator end() {
         return iterator{};
     }
 
    private:
-    explicit generator(promise_type* pt) : coro(handle_t::from_promise(*pt)) {}
-    handle_t coro{};
+    explicit generator(promise_type* pt) : coro_(handle_t::from_promise(*pt)) {}
+    handle_t coro_{};
 };
 }  // namespace ilib
 #endif

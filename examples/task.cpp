@@ -9,7 +9,7 @@ ilib::task<std::string_view> get_sth() {
 
 ilib::task<void> print_sth() {
     auto out = co_await get_sth();
-    std::cout << out;
+    std::cout << "get_sth returned: " << out;
 }
 
 int main() {

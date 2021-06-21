@@ -13,12 +13,16 @@ struct lazy<T(U...)> {
     lazy() noexcept : func{nullptr} {}
     /*! \brief constructs with a callable.*/
     template <class C>
-    lazy(C&& callable) : func{ilib::forward<C>(callable)} {}
+    lazy(C&& callable) : func{std::forward<C>(callable)} {}
 
-    ~lazy() noexcept { clear(); }
+    ~lazy() noexcept {
+        clear();
+    }
 
     /*! \brief returns true if the 'lazy' containts a function.*/
-    operator bool() noexcept { return static_cast<bool>(func); }
+    operator bool() noexcept {
+        return static_cast<bool>(func);
+    }
 
     lazy& operator=(decltype(nullptr)) noexcept {
         func = nullptr;
@@ -27,8 +31,8 @@ struct lazy<T(U...)> {
 
     /*! \brief assign by moving the operand function.*/
     lazy& operator=(const lazy& rhs) {
-        func = ilib::move(rhs.func);
-        last = ilib::forward<T>(rhs.last);
+        func = std::move(rhs.func);
+        last = std::forward<T>(rhs.last);
         return *this;
     }
 
@@ -36,7 +40,7 @@ struct lazy<T(U...)> {
      * returns.*/
     template <class... P>
     auto operator()(P&&... args) {
-        return force_call(ilib::forward<P>(args)...);
+        return force_call(std::forward<P>(args)...);
     }
 
     /*! \brief calls the stored function if there is no cached return.*/
@@ -45,7 +49,7 @@ struct lazy<T(U...)> {
         if (last) {
             return last;
         } else {
-            last = force_call(ilib::forward<P>(args)...);
+            last = force_call(std::forward<P>(args)...);
             return last;
         }
     }
@@ -53,19 +57,22 @@ struct lazy<T(U...)> {
     /*! \brief calls the stored function immediatly without checking for cached
      * returns.*/
     template <class... P>
-    auto force_call(P&&... args)
-        -> ilib::enable_if_t<(ilib::is_same_v<P, U> && ...), T> {
-        return func(ilib::forward<P>(args)...);
+    auto force_call(P&&... args) -> ilib::enable_if_t<(ilib::is_same_v<P, U> && ...), T> {
+        return func(std::forward<P>(args)...);
     }
 
-    constexpr bool is_cached() noexcept { return last.is_some(); }
+    constexpr bool is_cached() noexcept {
+        return last.is_some();
+    }
 
     constexpr void clear() noexcept {
         func = nullptr;
         last = ilib::None;
     }
 
-    constexpr void clear_cache() noexcept { last = ilib::None; }
+    constexpr void clear_cache() noexcept {
+        last = ilib::None;
+    }
 
    private:
     T func{};
@@ -76,9 +83,11 @@ struct lazy<void(U...)> {
     lazy() noexcept : func{nullptr} {}
 
     template <class C>
-    lazy(C&& callable) : func{ilib::forward<C>(callable)} {}
+    lazy(C&& callable) : func{std::forward<C>(callable)} {}
 
-    operator bool() noexcept { return static_cast<bool>(func); }
+    operator bool() noexcept {
+        return static_cast<bool>(func);
+    }
 
     lazy& operator=(decltype(nullptr)) noexcept {
         func = nullptr;
@@ -86,19 +95,18 @@ struct lazy<void(U...)> {
     }
 
     lazy& operator=(const lazy& rhs) {
-        func = ilib::move(rhs.func);
+        func = std::move(rhs.func);
         return *this;
     }
 
     template <class... P>
     void operator()(P&&... args) {
-        call(ilib::forward<P>(args)...);
+        call(std::forward<P>(args)...);
     }
 
     template <class... P>
-    auto call(P&&... args)
-        -> ilib::enable_if_t<(ilib::is_same_v<P, U> && ...)> {
-        func(ilib::forward<P>(args)...);
+    auto call(P&&... args) -> ilib::enable_if_t<(ilib::is_same_v<P, U> && ...)> {
+        func(std::forward<P>(args)...);
     }
 
    private:

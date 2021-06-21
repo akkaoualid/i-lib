@@ -1,18 +1,10 @@
 #ifndef H_4747488489949_DUEUEIEIK_7383839_GEURURIRIIR
 #define H_4747488489949_DUEUEIEIK_7383839_GEURURIRIIR
-#if __has_include(<coroutine>)
-#include <coroutine>
-#else
-#include <experimental/coroutine>
-namespace std {
-using std::experimental::coroutine_handle;
-using std::experimental::suspend_always;
-using std::experimental::suspend_never;
-}  // namespace std
-#endif
 #include <condition_variable>
 #include <exception>
 #include <mutex>
+
+#include "includes.hpp"
 namespace ilib {
 struct sync_wait_impl {
     struct promise_type {
@@ -20,7 +12,7 @@ struct sync_wait_impl {
             return sync_wait_impl{std::coroutine_handle<promise_type>::from_promise(*this)};
         }
 
-        std::suspend_always initial_suspend() {
+        coro::suspend_always initial_suspend() {
             return {};
         }
 
@@ -46,7 +38,7 @@ struct sync_wait_impl {
         }
 
         void wait() {
-            std::unique_lock lk{mtx};
+            coro::unique_lock lk{mtx};
             while (!done) { cv.wait(lk); }
         }
 
@@ -57,17 +49,17 @@ struct sync_wait_impl {
     };
     using handle_t = std::coroutine_handle<promise_type>;
 
-    sync_wait_impl(handle_t c) : coro{c} {}
+    sync_wait_impl(handle_t c) : coro_{c} {}
 
-    sync_wait_impl(sync_wait_impl&& sw) noexcept : coro{std::exchange(sw.coro, {})} {}
+    sync_wait_impl(sync_wait_impl&& sw) noexcept : coro_{std::exchange(sw.coro_, {})} {}
 
     void wait() {
-        coro.resume();
-        coro.promise().wait();
+        coro_.resume();
+        coro_.promise().wait();
     }
 
    private:
-    handle_t coro;
+    handle_t coro_;
 };
 
 template <class A>

@@ -1,18 +1,10 @@
 #ifndef GH894884848483_J36473939949_K8484884949_C4747484884_V74848484
 #define GH894884848483_J36473939949_K8484884949_C4747484884_V74848484
-#if __has_include(<coroutine>)
-#include <coroutine>
-#else
-#include <experimental/coroutine>
-namespace std {
-using std::experimental::coroutine_handle;
-using std::experimental::suspend_always;
-using std::experimental::suspend_never;
-}  // namespace std
-#endif
 #include <exception>
 #include <type_traits>
 #include <utility>
+
+#include "includes.hpp"
 namespace ilib {
 template <class>
 struct task;
@@ -25,7 +17,7 @@ struct task_promise {
     }
 
     auto initial_suspend() {
-        return std::suspend_always{};
+        return coro::suspend_always{};
     }
 
     task<T> get_return_object() noexcept;
@@ -35,8 +27,9 @@ struct task_promise {
             bool await_ready() noexcept {
                 return false;
             }
-            auto await_suspend(std::coroutine_handle<task_promise> ch) noexcept {
-                return ch.promise().cont;
+            coro::coroutine_handle<> await_suspend(coro::coroutine_handle<task_promise> ch) noexcept {
+                if (ch.promise().cont) return ch.promise().cont;
+                return coro::noop_coroutine();
             }
             void await_resume() noexcept {}
         };
@@ -58,7 +51,7 @@ struct task_promise {
 
    private:
     friend task<T>;
-    std::coroutine_handle<void> cont;
+    coro::coroutine_handle<> cont;
     union {
         T value;
     };
@@ -69,7 +62,7 @@ struct task_promise<void> {
     ~task_promise() noexcept {}
 
     auto initial_suspend() {
-        return std::suspend_always{};
+        return coro::suspend_always{};
     }
 
     task<void> get_return_object() noexcept;
@@ -79,8 +72,9 @@ struct task_promise<void> {
             bool await_ready() noexcept {
                 return false;
             }
-            auto await_suspend(std::coroutine_handle<task_promise> ch) noexcept {
-                return ch.promise().cont;
+            coro::coroutine_handle<> await_suspend(coro::coroutine_handle<task_promise> ch) noexcept {
+                if (ch.promise().cont) return ch.promise().cont;
+                return coro::noop_coroutine();
             }
             void await_resume() noexcept {}
         };
@@ -99,16 +93,16 @@ struct task_promise<void> {
 
    private:
     friend task<void>;
-    std::coroutine_handle<void> cont;
+    coro::coroutine_handle<> cont;
 };
 
 template <class T>
 struct task {
     using promise_type = task_promise<T>;
-    using handle_t = std::coroutine_handle<promise_type>;
+    using handle_t = coro::coroutine_handle<promise_type>;
 
-    explicit task(handle_t h) : coro{h} {}
-    task(task&& t) noexcept : coro{std::exchange(t.coro, {})} {}
+    explicit task(handle_t h) : coro_{h} {}
+    task(task&& t) noexcept : coro_{std::exchange(t.coro_, {})} {}
 
     auto operator co_await() && noexcept {
         struct awaiter {
@@ -116,7 +110,7 @@ struct task {
             bool await_ready() noexcept {
                 return false;
             }
-            auto await_suspend(std::coroutine_handle<void> ch) noexcept {
+            auto await_suspend(coro::coroutine_handle<void> ch) noexcept {
                 coro_.promise().cont = ch;
                 return coro_;
             }
@@ -127,23 +121,23 @@ struct task {
            private:
             handle_t coro_;
         };
-        return awaiter{coro};
+        return awaiter{coro_};
     }
 
     ~task() {
-        if (coro) coro.destroy();
+        if (coro_) coro_.destroy();
     }
 
    private:
-    handle_t coro;
+    handle_t coro_;
 };
 template <>
 struct task<void> {
     using promise_type = task_promise<void>;
-    using handle_t = std::coroutine_handle<promise_type>;
+    using handle_t = coro::coroutine_handle<promise_type>;
 
-    explicit task(handle_t h) : coro{h} {}
-    task(task&& t) noexcept : coro{std::exchange(t.coro, {})} {}
+    explicit task(handle_t h) : coro_{h} {}
+    task(task&& t) noexcept : coro_{std::exchange(t.coro_, {})} {}
 
     auto operator co_await() && noexcept {
         struct awaiter {
@@ -151,7 +145,7 @@ struct task<void> {
             bool await_ready() noexcept {
                 return false;
             }
-            auto await_suspend(std::coroutine_handle<void> ch) noexcept {
+            auto await_suspend(coro::coroutine_handle<void> ch) noexcept {
                 coro_.promise().cont = ch;
                 return coro_;
             }
@@ -162,24 +156,24 @@ struct task<void> {
            private:
             handle_t coro_;
         };
-        return awaiter{coro};
+        return awaiter{coro_};
     }
 
     ~task() {
-        if (coro) coro.destroy();
+        if (coro_) coro_.destroy();
     }
 
    private:
-    handle_t coro;
+    handle_t coro_;
 };
 
 template <class T>
 task<T> task_promise<T>::get_return_object() noexcept {
-    return task<T>{std::coroutine_handle<task_promise<T>>::from_promise(*this)};
+    return task<T>{coro::coroutine_handle<task_promise<T>>::from_promise(*this)};
 }
 
 task<void> task_promise<void>::get_return_object() noexcept {
-    return task<void>{std::coroutine_handle<task_promise<void>>::from_promise(*this)};
+    return task<void>{coro::coroutine_handle<task_promise<void>>::from_promise(*this)};
 }
 }  // namespace ilib
 #endif

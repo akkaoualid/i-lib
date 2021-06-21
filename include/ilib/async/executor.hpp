@@ -1,21 +1,13 @@
 #ifndef F_47489494999_H748493030303
 #define F_47489494999_H748493030303
-#if __has_include(<coroutine>)
-#include <coroutine>
-#else
-#include <experimental/coroutine>
-namespace std {
-using std::experimental::coroutine_handle;
-using std::experimental::suspend_always;
-using std::experimental::suspend_never;
-}  // namespace std
-#endif
 #include <ilib/async/task.hpp>
 #include <ilib/lifetime.hpp>
 #include <ilib/utility.hpp>
 #include <mutex>
 #include <thread>
 #include <type_traits>
+
+#include "includes.hpp"
 
 namespace ilib {
 template <class FT, class result_type = std::invoke_result_t<FT>>

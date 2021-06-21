@@ -1,4 +1,4 @@
-#include <ilib/utility/scope.hpp>
+#include <ilib/scope.hpp>
 #include <iostream>
 #include <string>
 

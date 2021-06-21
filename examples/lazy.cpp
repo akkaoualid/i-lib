@@ -1,4 +1,4 @@
-#include <ilib/utility/lazy.hpp>
+#include <ilib/lazy.hpp>
 #include <iostream>
 
 void get_sth() {

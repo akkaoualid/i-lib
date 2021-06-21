@@ -1,0 +1,13 @@
+function(add_ilib_example name)
+    add_executable(${name} ${name}.cpp)
+    target_include_directories(${name} PUBLIC ${CMAKE_SOURCE_DIR}/include)
+    target_compile_features(${name} PUBLIC cxx_std_20)
+    add_warns(${name})
+endfunction()
+
+add_ilib_example(lazy)
+add_ilib_example(scope)
+add_ilib_example(executor)
+add_ilib_example(static_vector)
+add_ilib_example(task)
+add_ilib_example(generator)

@@ -27,16 +27,17 @@ struct scope_exit {
 
     scope_exit& operator=(const scope_exit&) = delete;
 
-    scope_exit(scope_exit&& se) noexcept(
-        std::is_nothrow_move_constructible_v<T> ||
-        std::is_nothrow_copy_constructible_v<T>)
+    scope_exit(scope_exit&& se) noexcept(std::is_nothrow_move_constructible_v<T> ||
+                                         std::is_nothrow_copy_constructible_v<T>)
         : m_func{std::forward<T>(se.m_funv)} {}
 
     scope_exit(const scope_exit&) = delete;
 
     /*! \brief calls the function object with attention to ref-qualifiers
      */
-    ~scope_exit() { std::forward<T>(m_func)(); }
+    ~scope_exit() {
+        std::forward<T>(m_func)();
+    }
 
    private:
     T m_func;
@@ -44,23 +45,19 @@ struct scope_exit {
 template <class T>
 struct scope_success {
     template <class U>
-    scope_success(U&& fnc) noexcept(std::is_nothrow_constructible_v<T, U> ||
-                                    std::is_nothrow_constructible_v<T, U&>)
-        : m_exc_count{std::uncaught_exceptions()},
-          m_func{std::forward<U>(fnc)} {}
+    scope_success(U&& fnc) noexcept(std::is_nothrow_constructible_v<T, U> || std::is_nothrow_constructible_v<T, U&>)
+        : m_exc_count{std::uncaught_exceptions()}, m_func{std::forward<U>(fnc)} {}
 
     scope_success& operator=(const scope_success&) = delete;
 
-    scope_success(scope_success&& se) noexcept(
-        std::is_nothrow_move_constructible_v<T> ||
-        std::is_nothrow_copy_constructible_v<T>)
+    scope_success(scope_success&& se) noexcept(std::is_nothrow_move_constructible_v<T> ||
+                                               std::is_nothrow_copy_constructible_v<T>)
         : m_func{std::forward<T>(se.m_func)} {}
 
     scope_success(const scope_success&) = delete;
 
     ~scope_success() noexcept(noexcept(std::forward<T>(m_func))) {
-        if (std::uncaught_exceptions() <= m_exc_count)
-            std::forward<T>(m_func)();
+        if (std::uncaught_exceptions() <= m_exc_count) std::forward<T>(m_func)();
     }
 
    private:
@@ -83,9 +80,8 @@ struct scope_fail {
 
     scope_fail& operator=(const scope_fail&) = delete;
 
-    scope_fail(scope_fail&& se) noexcept(
-        std::is_nothrow_move_constructible_v<T> ||
-        std::is_nothrow_copy_constructible_v<T>)
+    scope_fail(scope_fail&& se) noexcept(std::is_nothrow_move_constructible_v<T> ||
+                                         std::is_nothrow_copy_constructible_v<T>)
         : m_func{std::forward<T>(se.m_func)} {}
 
     scope_fail(const scope_fail&) = delete;
@@ -101,21 +97,15 @@ struct scope_fail {
 template <class R, class D>
 struct unique_resource {
     constexpr unique_resource() noexcept(
-        std::is_nothrow_default_constructible_v<R>&&
-            std::is_nothrow_default_constructible_v<D>)
+        std::is_nothrow_default_constructible_v<R>&& std::is_nothrow_default_constructible_v<D>)
         : m_src{}, m_deleter{} {}
 
-    // clang-format off
-    template <class RR, class DD> requires std::is_convertible_v<RR, R> && std::is_convertible_v<DD, D>
-    constexpr unique_resource(RR&& r, DD&& d) noexcept(
-        (std::is_nothrow_copy_constructible_v<R, RR> ||
-         std::is_nothrow_copy_constructible_v<D, DD>)
-        &&
-        (std::is_nothrow_move_constructible_v<R, RR> ||
-         std::is_nothrow_move_constructible_v<D, DD>))
+    template <class RR, class DD>
+    requires std::is_convertible_v<RR, R> && std::is_convertible_v<DD, D>
+    constexpr unique_resource(RR&& r, DD&& d) noexcept(std::is_nothrow_constructible_v<R, RR> ||
+                                                       std::is_nothrow_constructible_v<D, DD>)
 
-    : m_src{std::forward<RR>(r)}, m_deleter{std::forward<DD>(d)} {}
-    // clang-format on
+        : m_src{std::forward<RR>(r)}, m_deleter{std::forward<DD>(d)} {}
 
     constexpr const R& get() const& noexcept {
         if constexpr (std::is_reference_v<R>)
@@ -124,7 +114,7 @@ struct unique_resource {
             return m_src;
     }
 
-    constexpr R& get() noexcept {
+    constexpr R& get() & noexcept {
         if constexpr (std::is_reference_v<R>)
             return m_src.get();
         else
@@ -138,17 +128,20 @@ struct unique_resource {
             return std::move(m_src);
     }
 
-    constexpr const D& get_deleter() const noexcept { return m_deleter; }
+    constexpr const D& get_deleter() const noexcept {
+        return m_deleter;
+    }
 
-    constexpr D& get_deleter() noexcept { return m_deleter; }
+    constexpr D& get_deleter() noexcept {
+        return m_deleter;
+    }
 
     ~unique_resource() noexcept(std::is_nothrow_invocable_v<D, R>) {
         m_deleter(m_src);
     }
 
    private:
-    std::conditional_t<std::is_reference_v<R>, std::refrence_wrapper<R>, R>
-        m_src;
+    std::conditional_t<std::is_reference_v<R>, std::reference_wrapper<R>, R> m_src;
     D m_deleter;
 };
 template <class F>
