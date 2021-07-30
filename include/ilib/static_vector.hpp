@@ -2,6 +2,7 @@
 #define U638392002938382772829203948393738_Z6373930030383838398_X7383920309393939
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <ilib/utility.hpp>
 #include <iterator>
@@ -33,7 +34,10 @@ template <class T, std::size_t N> struct static_vector {
     }
 
     constexpr static_vector(const static_vector& other) noexcept : static_vector(other.cbegin(), other.cend()) {}
-    constexpr static_vector(static_vector&& other) noexcept { swap(*this, std::move(other)); }
+    constexpr static_vector(static_vector&& other) noexcept {
+        for (auto&& elm : other)
+            emplace_back(std::move(elm));
+    }
 
     constexpr iterator begin() noexcept { return data(); }
     constexpr iterator end() noexcept { return data() + m_size; }
@@ -48,33 +52,52 @@ template <class T, std::size_t N> struct static_vector {
             pop_back();
     }
 
-    constexpr pointer data() noexcept { return std::launder(reinterpret_cast<T*>(m_data.data())); }
-    constexpr const_pointer data() const noexcept { return std::launder(reinterpret_cast<const T*>(m_data.data())); }
+    constexpr pointer data() noexcept { return std::launder(reinterpret_cast<T*>(m_data)); }
+    constexpr const_pointer data() const noexcept { return std::launder(reinterpret_cast<const T*>(m_data)); }
 
-    constexpr static_vector& operator=(static_vector other) noexcept {
-        swap(*this, other);
+    constexpr static_vector& operator=(const static_vector& other) noexcept {
+        if (this == std::addressof(other))
+            return *this;
+        std::size_t s = std::min(size(), other.size());
+        for (std::size_t i = 0; i < s; ++i)
+            data()[i] = other[i];
+
+        if (size() < other.size())
+            for (std::size_t i = size(); i < other.size(); ++i)
+                emplace_back(other[i]);
+        else
+            for (std::size_t i = other.size(); i < size(); ++i)
+                pop_back();
         return *this;
     }
     constexpr static_vector& operator=(static_vector&& other) noexcept {
-        clear();
-        swap(*this, other);
+        if (this == std::addressof(other))
+            return *this;
+        std::size_t s = std::min(size(), other.size());
+        for (std::size_t i = 0; i < s; ++i)
+            data()[i] = std::move(other[i]);
+
+        if (size() < other.size())
+            for (std::size_t i = size(); i < other.size(); ++i)
+                emplace_back(std::move(other[i]));
+        else
+            for (std::size_t i = other.size(); i < size(); ++i)
+                pop_back();
         return *this;
     }
 
-    constexpr T& operator[](size_type idx) { return *std::launder(reinterpret_cast<T*>(std::addressof(m_data[idx]))); }
-    constexpr const T& operator[](size_type idx) const {
-        return *std::launder(reinterpret_cast<const T*>(std::addressof(m_data[idx])));
-    }
+    constexpr T& operator[](size_type idx) { return *(data() + idx); }
+    constexpr const T& operator[](size_type idx) const { return *(data() + idx); }
 
     T& at(size_type idx) {
         if (idx >= size())
             throw std::out_of_range("ilib::static_vector::at: invalid range");
-        return *std::launder(reinterpret_cast<T*>(std::addressof(m_data[idx])));
+        return *(data() + idx);
     }
     const T& at(size_type idx) const {
         if (idx >= size())
             throw std::out_of_range("ilib::static_vector::at: invalid range ");
-        return *std::launder(reinterpret_cast<const T*>(std::addressof(m_data[idx])));
+        return *(data() + idx);
     }
 
     template <class... Args> void emplace_back(Args&&... args) noexcept(std::is_nothrow_constructible_v<T, Args...>) {
@@ -84,8 +107,8 @@ template <class T, std::size_t N> struct static_vector {
     }
     constexpr void push_back(const T& value) noexcept(std::is_nothrow_constructible_v<T, T>) { emplace_back(value); }
     constexpr void pop_back() noexcept(std::is_nothrow_destructible_v<T>) {
-        std::destroy_at(std::addressof(m_data[m_size]));
         --m_size;
+        std::destroy_at(std::addressof(m_data[m_size]));
     }
 
     constexpr const_reference front() const noexcept { return *data(); }
@@ -102,7 +125,7 @@ template <class T, std::size_t N> struct static_vector {
     ~static_vector() { clear(); }
 
   private:
-    std::array<std::aligned_storage_t<sizeof(T), alignof(T)>, N> m_data = {};
+    alignas(T) std::byte m_data[sizeof(T) * N];
     size_type m_size = 0;
 };
 

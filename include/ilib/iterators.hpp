@@ -16,12 +16,12 @@ template <class T> struct enumerator_iter {
     using reference = typename std::iterator_traits<T>::reference;
     using iterator_category = typename std::iterator_traits<T>::iterator_category;
 
-    enumerator_iter(const T &it) noexcept : iter(it) {}
+    enumerator_iter(const T& it) noexcept : iter(it) {}
     constexpr auto operator*() const -> std::pair<std::size_t, reference>
     requires requires { *iter; }
     { return {count, *iter}; }
     constexpr auto operator->() const -> pointer { return std::to_address(iter); }
-    constexpr auto operator++() -> enumerator_iter & {
+    constexpr auto operator++() -> enumerator_iter& {
         ++count;
         ++iter;
         return *this;
@@ -32,11 +32,11 @@ template <class T> struct enumerator_iter {
         iter++;
         return temp;
     }
-    constexpr auto operator+=(difference_type n) -> enumerator_iter & {
+    constexpr auto operator+=(difference_type n) -> enumerator_iter& {
         count += n;
         iter += n;
     }
-    constexpr auto operator--() -> enumerator_iter & {
+    constexpr auto operator--() -> enumerator_iter& {
         if (count == 0)
             count = 0;
         else
@@ -53,7 +53,7 @@ template <class T> struct enumerator_iter {
         iter--;
         return temp;
     }
-    constexpr auto operator-=(difference_type n) -> enumerator_iter &requires requires { iter -= n; }
+    constexpr auto operator-=(difference_type n) -> enumerator_iter& requires requires { iter -= n; }
     {
         if (n >= count)
             count = 0;
@@ -61,11 +61,11 @@ template <class T> struct enumerator_iter {
             count -= n;
         iter -= n;
     }
-    constexpr bool operator!=(const enumerator_iter &rhs) const noexcept requires requires { iter != iter; }
+    constexpr bool operator!=(const enumerator_iter& rhs) const noexcept requires requires { iter != iter; }
     { return (iter != rhs.iter); }
-    constexpr bool operator==(const enumerator_iter &rhs) const noexcept requires requires { iter == iter; }
+    constexpr bool operator==(const enumerator_iter& rhs) const noexcept requires requires { iter == iter; }
     { return (iter == rhs.iter); }
-    constexpr auto friend operator+(const enumerator_iter &lhs, difference_type n)
+    constexpr auto friend operator+(const enumerator_iter& lhs, difference_type n)
         -> enumerator_iter requires requires {
         iter + n;
     }
@@ -76,7 +76,7 @@ template <class T> struct enumerator_iter {
         return it;
     }
 
-    constexpr auto friend operator-(const enumerator_iter &lhs, difference_type n)
+    constexpr auto friend operator-(const enumerator_iter& lhs, difference_type n)
         -> enumerator_iter requires requires {
         iter - n;
     }
@@ -89,13 +89,13 @@ template <class T> struct enumerator_iter {
         lhs.iter - n;
         return it;
     }
-    constexpr auto friend operator+(difference_type n, const enumerator_iter &rhs)
+    constexpr auto friend operator+(difference_type n, const enumerator_iter& rhs)
         -> enumerator_iter requires requires {
         n + iter;
     }
     { return rhs + n; }
 
-    constexpr auto friend operator-(difference_type n, const enumerator_iter &rhs)
+    constexpr auto friend operator-(difference_type n, const enumerator_iter& rhs)
         -> enumerator_iter requires requires {
         n - iter;
     }
@@ -108,12 +108,12 @@ template <class... A> struct zip_iterator {
 
     constexpr value_type operator*() noexcept {
         return std::apply(
-            [](auto &&...args) constexpr { return value_type(*args...); }, iters);
+            [](auto&&... args) constexpr { return value_type(*args...); }, iters);
     }
 
-    constexpr zip_iterator &operator++() noexcept {
+    constexpr zip_iterator& operator++() noexcept {
         std::apply(
-            [](auto &...args) constexpr { ((args += 1), ...); }, iters);
+            [](auto&... args) constexpr { ((++args), ...); }, iters);
         return *this;
     }
 
@@ -123,9 +123,9 @@ template <class... A> struct zip_iterator {
         return t;
     }
 
-    constexpr const zip_iterator &operator--() noexcept {
+    constexpr const zip_iterator& operator--() noexcept {
         std::apply(
-            [](auto &...args) constexpr { ((args -= 1), ...); }, iters);
+            [](auto&... args) constexpr { ((--args), ...); }, iters);
         return *this;
     }
 
@@ -135,11 +135,11 @@ template <class... A> struct zip_iterator {
         return t;
     }
 
-    constexpr bool operator==(const zip_iterator &other) noexcept {
+    constexpr bool operator==(const zip_iterator& other) noexcept {
         return tpl_equals(iters, other.iters, std::make_index_sequence<sizeof...(A)>());
     }
 
-    constexpr bool operator!=(const zip_iterator &other) noexcept { return !(*this == other); }
+    constexpr bool operator!=(const zip_iterator& other) noexcept { return !(*this == other); }
 
   private:
     template <std::size_t... Idx>
@@ -163,11 +163,11 @@ template <class... It> struct zipper {
     constexpr zipper(It... args) noexcept : iters{std::forward<It>(args)...} {}
 
     constexpr auto begin() noexcept {
-        return std::apply([](auto &&...args) { return ::ilib::details::zip_iterator(std::begin(args)...); }, iters);
+        return std::apply([](auto&&... args) { return ::ilib::details::zip_iterator(std::begin(args)...); }, iters);
     }
 
     constexpr auto end() noexcept {
-        return std::apply([](auto &&...args) { return ::ilib::details::zip_iterator(std::end(args)...); }, iters);
+        return std::apply([](auto&&... args) { return ::ilib::details::zip_iterator(std::end(args)...); }, iters);
     }
 
   private:
@@ -200,16 +200,16 @@ template <class T = std::int64_t> struct iota {
 
         constexpr iterator(T i) noexcept : value{i} {}
 
-        constexpr bool operator==(const iterator &other) noexcept { return value == other.value; }
-        constexpr bool operator!=(const iterator &other) noexcept { return !((*this) == other); }
+        constexpr bool operator==(const iterator& other) noexcept { return value == other.value; }
+        constexpr bool operator!=(const iterator& other) noexcept { return !((*this) == other); }
 
         constexpr T operator*() noexcept { return value; }
 
-        constexpr iterator &operator++() noexcept {
+        constexpr iterator& operator++() noexcept {
             ++value;
             return *this;
         }
-        constexpr iterator &operator--() noexcept {
+        constexpr iterator& operator--() noexcept {
             --value;
             return *this;
         }
@@ -225,8 +225,8 @@ template <class T = std::int64_t> struct iota {
             return ins;
         }
 
-        constexpr iterator &operator+=(T count) noexcept { value += count; }
-        constexpr iterator &operator-=(T count) noexcept { value -= count; }
+        constexpr iterator& operator+=(T count) noexcept { value += count; }
+        constexpr iterator& operator-=(T count) noexcept { value -= count; }
 
       private:
         T value;
